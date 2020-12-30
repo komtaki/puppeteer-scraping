@@ -55,7 +55,7 @@ RUN cd /noto && \
 WORKDIR /app
 
 COPY ./package.json ./package-lock.json ./
-RUN npm i
+RUN npm ci
 
 COPY ./src ./src
 
