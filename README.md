@@ -11,7 +11,7 @@ cd puppeteer-scraping
 
 docker build -t puppeteer .
 
-cp .env.sampie .env
+cp .env.sample .env
 vi .env
 ```
 
