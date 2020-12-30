@@ -5,7 +5,7 @@
 ### setup
 
 ```
-git git@github.com:komtaki/puppeteer-scraping.git
+git clone https://github.com/komtaki/puppeteer-scraping.git
 
 cd puppeteer-scraping
 
