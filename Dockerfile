@@ -1,4 +1,4 @@
-FROM node:14.15
+FROM node:14
 
 RUN sed -i -E "s@http://(archive|security)\.ubuntu\.com/ubuntu/@http://ftp.jaist.ac.jp/pub/Linux/ubuntu/@g" /etc/apt/sources.list
 RUN apt-get update \
