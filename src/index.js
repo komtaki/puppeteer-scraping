@@ -1,5 +1,9 @@
 const puppeteer = require("puppeteer");
 
+const fullScreenShot = async (page, path) => {
+  await page.screenshot({ path: path, fullPage: true });
+};
+
 const DATA_PATH = "/app/src/data";
 
 const login = async (page) => {
@@ -12,16 +16,13 @@ const login = async (page) => {
   await page.type(LOGIN_USER_SELECTOR, process.env.DOCKER_WALLET_ID);
   await page.type(LOGIN_PASS_SELECTOR, process.env.DOCKER_WALLET_PASSWORD);
 
-  await Promise.all([
-    page.waitForNavigation({ waitUntil: "networkidle0" }),
-    page.click(LOGIN_SUBMIT_SELECTOR),
-  ]);
+  await page.click(LOGIN_SUBMIT_SELECTOR);
+
+  const _sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  await _sleep(10000);
 
   await fullScreenShot(page, `${DATA_PATH}/login.png`);
-};
-
-const fullScreenShot = async (page, path) => {
-  await page.screenshot({ path: path, fullPage: true });
 };
 
 const getData = async (page) => {
