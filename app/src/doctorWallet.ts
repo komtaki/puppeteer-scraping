@@ -1,11 +1,6 @@
 import puppeteer from "puppeteer";
 import type { Page } from "puppeteer";
-
-const fullScreenShot = async (page: Page, path: string) => {
-  await page.screenshot({ path: path, fullPage: true });
-};
-
-const DATA_PATH = "/app/data";
+import { fullScreenShot } from './utils';
 
 const login = async (page: Page) => {
   const LOGIN_USER_SELECTOR = "#user_email";
@@ -23,7 +18,7 @@ const login = async (page: Page) => {
 
   await _sleep(10000);
 
-  await fullScreenShot(page, `${DATA_PATH}/login.png`);
+  await fullScreenShot(page, `${process.env.DATA_PATH}/login.png`);
 };
 
 const getData = async (page: Page) => {
@@ -72,7 +67,7 @@ const getData = async (page: Page) => {
 
 const getDataList = async (page: Page) => {
   await getData(page);
-  await fullScreenShot(page, `${DATA_PATH}/this-month.png`);
+  await fullScreenShot(page, `${process.env.DATA_PATH}/this-month.png`);
 
   const PREVIOUS_MONTH = "#previous-month";
   const maxMonth = process.env.MAX_PREVIOUS_MONTH || 12
@@ -91,7 +86,7 @@ const getDataList = async (page: Page) => {
       "#after_input_receipt_list > tbody > tr > .shop_name_cell";
     const isEmpty = await page.$(DATA_EMPTY_SELECTOR);
 
-    await fullScreenShot(page, `${DATA_PATH}/previous-month-${i}.png`);
+    await fullScreenShot(page, `${process.env.DATA_PATH}/previous-month-${i}.png`);
 
     if (!isEmpty) {
       continue;
