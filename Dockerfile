@@ -1,62 +1,34 @@
-FROM node:14
+FROM node:16-slim
 
-RUN sed -i -E "s@http://(archive|security)\.ubuntu\.com/ubuntu/@http://ftp.jaist.ac.jp/pub/Linux/ubuntu/@g" /etc/apt/sources.list
+# see https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#running-puppeteer-in-docker
+
+# Install latest chrome dev package and fonts to support major charsets (Chinese, Japanese, Arabic, Hebrew, Thai and a few others)
+# Note: this installs the necessary libs to make the bundled version of Chromium that Puppeteer
+# installs, work.
 RUN apt-get update \
-      && apt-get install -y \
-      gconf-service \
-      libasound2 \
-      libatk1.0-0 \
-      libc6 \
-      libcairo2 \
-      libcups2 \
-      libdbus-1-3 \
-      libexpat1 \
-      libfontconfig1 \
-      libgcc1 \
-      libgconf-2-4 \
-      libgdk-pixbuf2.0-0 \
-      libglib2.0-0 \
-      libgtk-3-0 \
-      libnspr4 \
-      libpango-1.0-0 \
-      libpangocairo-1.0-0 \
-      libstdc++6 \
-      libx11-6 \
-      libx11-xcb1 \
-      libxcb1 \
-      libxcomposite1 \
-      libxcursor1 \
-      libxdamage1 \
-      libxext6 \
-      libxfixes3 \
-      libxi6 \
-      libxrandr2 \
-      libxrender1 \
-      libxss1 \
-      libxtst6 \
-      ca-certificates \
-      fonts-liberation \
-      libappindicator1 \
-      libnss3 \
-      lsb-release \
-      xdg-utils \
-      wget
-
-# Japanese font
-RUN mkdir /noto
-ADD https://noto-website.storage.googleapis.com/pkgs/NotoSansCJKjp-hinted.zip /noto
-RUN cd /noto && \
-    unzip NotoSansCJKjp-hinted.zip && \
-    mkdir -p /usr/share/fonts/noto && \
-    cp *.otf /usr/share/fonts/noto && \
-    chmod 644 -R /usr/share/fonts/noto/ && \
-    /usr/bin/fc-cache -fv
+    && apt-get install -y wget gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+      --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY ./package.json ./package-lock.json ./
+COPY ./app/package.json ./app/package-lock.json ./app/tsconfig.json ./
 RUN npm ci
 
-COPY ./src ./src
+COPY ./app/@types ./@types
+COPY ./app/data ./data
+COPY ./app/src ./src
 
-ENTRYPOINT ["node", "src/index.js"]
+RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+    && mkdir -p /home/pptruser/Downloads \
+    && chown -R pptruser:pptruser /home/pptruser \
+    && chown -R pptruser:pptruser /app
+
+# Run everything after as non-privileged user.
+USER pptruser
+
+ENTRYPOINT ["npm", "start"]

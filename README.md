@@ -18,7 +18,7 @@ vi .env
 ### execution
 
 ```
-docker run -v $(pwd)/src/data:/app/src/data --rm --env-file=$(pwd)/.env puppeteer
+docker run -v $(pwd)/app/data:/app/data --rm --env-file=$(pwd)/.env puppeteer
 ```
 
 A screenshot of the execution process will be stored in ./src/data.

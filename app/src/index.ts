@@ -1,31 +1,32 @@
-const puppeteer = require("puppeteer");
+import puppeteer from "puppeteer";
+import type { Page } from "puppeteer";
 
-const fullScreenShot = async (page, path) => {
+const fullScreenShot = async (page: Page, path: string) => {
   await page.screenshot({ path: path, fullPage: true });
 };
 
-const DATA_PATH = "/app/src/data";
+const DATA_PATH = "/app/data";
 
-const login = async (page) => {
+const login = async (page: Page) => {
   const LOGIN_USER_SELECTOR = "#user_email";
   const LOGIN_PASS_SELECTOR = "#user_password";
   const LOGIN_SUBMIT_SELECTOR = "#signup-view-signup-button";
 
   await page.goto("https://www.drwallet.jp/users/sign_in");
 
-  await page.type(LOGIN_USER_SELECTOR, process.env.DOCKER_WALLET_ID);
-  await page.type(LOGIN_PASS_SELECTOR, process.env.DOCKER_WALLET_PASSWORD);
+  await page.type(LOGIN_USER_SELECTOR, process.env.DOCKER_WALLET_ID || '');
+  await page.type(LOGIN_PASS_SELECTOR, process.env.DOCKER_WALLET_PASSWORD || '');
 
   await page.click(LOGIN_SUBMIT_SELECTOR);
 
-  const _sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const _sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   await _sleep(10000);
 
   await fullScreenShot(page, `${DATA_PATH}/login.png`);
 };
 
-const getData = async (page) => {
+const getData = async (page: Page) => {
   const DATA_DATE_SELECTOR =
     "#after_input_receipt_list > tbody > tr > td.transacted_at_cell";
   const dateElements = await page.$$(DATA_DATE_SELECTOR);
@@ -51,6 +52,10 @@ const getData = async (page) => {
     let isIncome = await amountClassName.includes('income') ? '' : '-';
     let amountValue = await (await amountElements[j].getProperty("textContent")).jsonValue();
 
+    if (!amountValue) {
+      continue
+    }
+
     let moneyData = [
       await (await dateElements[j].getProperty("textContent")).jsonValue(),
       await (await shopElements[j].getProperty("textContent")).jsonValue(),
@@ -65,13 +70,14 @@ const getData = async (page) => {
   }
 }
 
-const getDataList = async (page) => {
+const getDataList = async (page: Page) => {
   await getData(page);
   await fullScreenShot(page, `${DATA_PATH}/this-month.png`);
 
   const PREVIOUS_MONTH = "#previous-month";
+  const maxMonth = process.env.MAX_PREVIOUS_MONTH || 12
 
-  for (let i = 0; i < process.env.MAX_PREVIOUS_MONTH; i++) {
+  for (let i = 0; i < maxMonth; i++) {
     await page.click(PREVIOUS_MONTH);
 
     const loadingSelector = ".blockOverlay";
@@ -96,6 +102,7 @@ const getDataList = async (page) => {
 
 (async () => {
   const browser = await puppeteer.launch({
+    executablePath: 'google-chrome-stable',
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
   const page = await browser.newPage();
