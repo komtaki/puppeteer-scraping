@@ -1,6 +1,6 @@
 import puppeteer from "puppeteer";
 import type { Page } from "puppeteer";
-import { fullScreenShot } from './utils';
+import { fullScreenShot, getPropertyValueFromElement } from "./utils/puppeteer";
 
 const login = async (page: Page) => {
   const LOGIN_USER_SELECTOR = "#user_email";
@@ -9,12 +9,16 @@ const login = async (page: Page) => {
 
   await page.goto("https://www.drwallet.jp/users/sign_in");
 
-  await page.type(LOGIN_USER_SELECTOR, process.env.DOCKER_WALLET_ID || '');
-  await page.type(LOGIN_PASS_SELECTOR, process.env.DOCKER_WALLET_PASSWORD || '');
+  await page.type(LOGIN_USER_SELECTOR, process.env.DOCKER_WALLET_ID || "");
+  await page.type(
+    LOGIN_PASS_SELECTOR,
+    process.env.DOCKER_WALLET_PASSWORD || ""
+  );
 
   await page.click(LOGIN_SUBMIT_SELECTOR);
 
-  const _sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const _sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   await _sleep(10000);
 
@@ -22,55 +26,48 @@ const login = async (page: Page) => {
 };
 
 const getData = async (page: Page) => {
-  const DATA_DATE_SELECTOR =
-    "#after_input_receipt_list > tbody > tr > td.transacted_at_cell";
-  const dateElements = await page.$$(DATA_DATE_SELECTOR);
+  const SELECTOR = {
+    DATA_DATE: "#after_input_receipt_list > tbody > tr > td.transacted_at_cell",
+    DATA_SHOP: "#after_input_receipt_list > tbody > tr > td.shop_name_cell",
+    DATA_AMOUNT: "#after_input_receipt_list > tbody > tr > td.amount_cell > p",
+    DATA_CATEGORY: "#after_input_receipt_list > tbody > tr > td.category_cell",
+    DATA_ACCOUNT: "#after_input_receipt_list > tbody > tr > td.account_cell",
+  };
 
-  const DATA_SHOP_SELECTOR =
-    "#after_input_receipt_list > tbody > tr > td.shop_name_cell";
-  const shopElements = await page.$$(DATA_SHOP_SELECTOR);
-
-  const DATA_AMOUNT_SELECTOR =
-    "#after_input_receipt_list > tbody > tr > td.amount_cell > p";
-  const amountElements = await page.$$(DATA_AMOUNT_SELECTOR);
-
-  const DATA_CATEGORY_SELECTOR =
-    "#after_input_receipt_list > tbody > tr > td.category_cell";
-  const categoryElements = await page.$$(DATA_CATEGORY_SELECTOR);
-
-  const DATA_ACCOUNT_SELECTOR =
-    "#after_input_receipt_list > tbody > tr > td.account_cell";
-  const accountElements = await page.$$(DATA_ACCOUNT_SELECTOR);
+  const dateElements = await page.$$(SELECTOR.DATA_DATE);
+  const shopElements = await page.$$(SELECTOR.DATA_SHOP);
+  const amountElements = await page.$$(SELECTOR.DATA_AMOUNT);
+  const categoryElements = await page.$$(SELECTOR.DATA_CATEGORY);
+  const accountElements = await page.$$(SELECTOR.DATA_ACCOUNT);
 
   for (let j = 0; j < shopElements.length; j++) {
-    let amountClassName = await (await amountElements[j].getProperty("className")).jsonValue();
-    let isIncome = await amountClassName.includes('income') ? '' : '-';
-    let amountValue = await (await amountElements[j].getProperty("textContent")).jsonValue();
+    const amountClassName =
+      (await getPropertyValueFromElement(amountElements[j], "className")) || "";
+    const isIncome = (await amountClassName.includes("income")) ? "" : "-";
+    const amountValue = await getPropertyValueFromElement(amountElements[j]);
 
     if (!amountValue) {
-      continue
+      continue;
     }
 
-    let moneyData = [
-      await (await dateElements[j].getProperty("textContent")).jsonValue(),
-      await (await shopElements[j].getProperty("textContent")).jsonValue(),
-      await amountValue.replace('￥', isIncome),
-      await (
-        await categoryElements[j].getProperty("textContent")
-      ).jsonValue(),
-      await (await accountElements[j].getProperty("textContent")).jsonValue(),
+    const moneyData = [
+      await getPropertyValueFromElement(dateElements[j]),
+      await getPropertyValueFromElement(shopElements[j]),
+      await amountValue.replace("￥", isIncome),
+      await getPropertyValueFromElement(categoryElements[j]),
+      await getPropertyValueFromElement(accountElements[j]),
     ];
 
-    await console.log('"' + moneyData.join('","') + '"');
+    console.log('"' + moneyData.join('","') + '"');
   }
-}
+};
 
 const getDataList = async (page: Page) => {
   await getData(page);
   await fullScreenShot(page, `${process.env.DATA_PATH}/this-month.png`);
 
   const PREVIOUS_MONTH = "#previous-month";
-  const maxMonth = process.env.MAX_PREVIOUS_MONTH || 12
+  const maxMonth = process.env.MAX_PREVIOUS_MONTH || 12;
 
   for (let i = 0; i < maxMonth; i++) {
     await page.click(PREVIOUS_MONTH);
@@ -86,7 +83,10 @@ const getDataList = async (page: Page) => {
       "#after_input_receipt_list > tbody > tr > .shop_name_cell";
     const isEmpty = await page.$(DATA_EMPTY_SELECTOR);
 
-    await fullScreenShot(page, `${process.env.DATA_PATH}/previous-month-${i}.png`);
+    await fullScreenShot(
+      page,
+      `${process.env.DATA_PATH}/previous-month-${i}.png`
+    );
 
     if (!isEmpty) {
       continue;
@@ -97,14 +97,16 @@ const getDataList = async (page: Page) => {
 
 (async () => {
   const browser = await puppeteer.launch({
-    executablePath: 'google-chrome-stable',
+    executablePath: "google-chrome-stable",
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
   const page = await browser.newPage();
 
   await login(page);
 
-  await console.log('"' + ["日付", "店舗名", "合計金額", "カテゴリー", "口座"].join('","') + '"');
+  console.log(
+    '"' + ["日付", "店舗名", "合計金額", "カテゴリー", "口座"].join('","') + '"'
+  );
   await getDataList(page);
 
   await browser.close();
